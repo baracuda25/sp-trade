@@ -1,0 +1,125 @@
+daml 1.2
+
+module QuoteAPI where
+
+import ProductModel
+
+template IssuerRole
+  with
+    issuer: Party
+  where
+    signatory issuer
+    controller issuer can
+        nonconsuming InviteClient: ContractId ClientRoleInvitation
+            with
+             client: Party
+            do
+             create ClientRoleInvitation with issuer; client
+
+template ClientRoleInvitation
+    with
+        issuer: Party
+        client: Party
+    where
+        signatory issuer
+        observer client
+        controller client can
+          AcceptInvite: ContractId ClientIssuerRole
+            do
+                create ClientIssuerRole with issuer; client
+          RejectInvite: ()
+            do
+                return()
+
+template ClientIssuerRole
+     with
+         issuer: Party
+         client: Party
+     where
+       signatory client,issuer
+       controller client can
+         nonconsuming RequestQuote: ContractId QuoteRequest
+           with sp: StructuredProduct
+           do create QuoteRequest with issuer; client; sp
+
+
+template QuoteRequest
+  with
+    issuer: Party
+    client: Party
+    sp: StructuredProduct
+  where
+    signatory client
+    observer issuer
+    controller issuer can
+        ProposeTradableQuote: ContractId QuoteProposal
+            with
+                token: ContractId ClientIssuerRole
+                response: StructuredProduct
+            do
+                t <- fetch token
+                assert (issuer == t.issuer)
+                assert (client == t.client)
+                create QuoteProposal with issuer; client, sp=response; tradable = True
+        ProposeIndicativeQuote: ContractId QuoteProposal
+            with
+                response: StructuredProduct
+            do
+              create QuoteProposal with issuer; client, sp=response; tradable = False
+
+
+
+template QuoteProposal
+  with
+    issuer: Party
+    client: Party
+    sp: StructuredProduct
+    tradable: Bool
+  where
+    signatory issuer,client
+    controller client can
+        Execute: ContractId ExecutionProposal
+            with
+                token: ContractId ClientIssuerRole
+                notional:Decimal
+            do
+                t <- fetch token
+                assert (issuer == t.issuer)
+                assert (client == t.client)
+                assert (tradable)
+                assert (notional <= sp.notional)
+                create ExecutionProposal with issuer; client; sp = sp with {notional}
+        RejectQuoteProposal: ()
+                do return()
+
+template ExecutionProposal
+  with
+    issuer: Party
+    client: Party
+    sp: StructuredProduct
+  where
+    signatory client
+    controller issuer can
+        AcceptExecution: ContractId Trade
+            with
+                token: ContractId ClientIssuerRole
+                iban : Text
+                tradeId:Text
+            do
+                t <- fetch token
+                assert (issuer == t.issuer)
+                assert (client == t.client)
+                create Trade with issuer; client; sp; iban; tradeId
+        RejectExecution:()
+            do
+                return()
+
+template Trade
+  with
+    issuer: Party
+    client: Party
+    sp: StructuredProduct
+    tradeId:Text
+    iban:Text
+  where
+    signatory issuer,client

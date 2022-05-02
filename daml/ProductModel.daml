@@ -1,0 +1,35 @@
+daml 1.2
+
+module ProductModel where
+
+data ProductType
+  = ATC
+  | RC
+  | BRC
+  | FCN
+  | DCN
+    deriving (Eq, Show)
+
+data Currency = CHF
+                  | USD
+                  | EUR
+                  | GBP
+                    deriving (Eq, Show)
+
+data Exchange = SIX|NSQ
+         deriving (Eq, Show)
+
+data Underlying = Underlying
+    with
+        id:Text
+        ticker:Text
+        currency:Currency
+        exchange:Exchange
+         deriving (Eq, Show)
+
+data StructuredProduct = StructuredProduct
+    with
+        product : ProductType
+        underlying : [Underlying]
+        notional : Decimal
+         deriving (Eq, Show)

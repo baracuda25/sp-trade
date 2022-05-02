@@ -1,0 +1,16 @@
+sdk-version: 0.13.54
+name: DAML-multi-issuer-structured-product-platform
+version: 0.1.0
+source: daml
+exposed-modules:
+  - Main
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - daml-script
+start-navigator: false
+codegen:
+  scala:
+    package-prefix: com.etaranenko.sp.model
+    output-directory: scala-codegen/src/main/scala
+    verbosity: 2

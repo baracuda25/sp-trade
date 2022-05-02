@@ -1,0 +1,47 @@
+
+daml 1.2
+module Main where
+
+import ProductModel
+import QuoteAPI
+
+
+setup = scenario do
+  client <- getParty "CLIENT"
+  jpmIssuer <- getParty "JPM"
+  let
+    teslaUnderlying = Underlying
+        with
+            id = "SPH011232323"
+            ticker = "TSLA"
+            currency = USD
+            exchange = NSQ
+
+  let
+      sp = StructuredProduct
+        with
+          product = DCN
+          underlying = [teslaUnderlying]
+          notional = 50000000.0
+
+  let
+     issuerRole = IssuerRole
+           with
+               issuer = jpmIssuer
+
+  issuerRoleCid <- submit jpmIssuer do
+                    create issuerRole
+  clientInvitationCid <- submit jpmIssuer do
+                  exercise issuerRoleCid InviteClient with client
+  clientIssuerRoleCid <- submit client do
+                    exercise clientInvitationCid AcceptInvite
+  quoteRequestCid <- submit client do
+                exercise clientIssuerRoleCid RequestQuote with sp
+  tradableProposalCid <- submit jpmIssuer do
+                exercise quoteRequestCid ProposeTradableQuote with response = sp;token=clientIssuerRoleCid
+  executionProposalCid <- submit client do
+                  exercise tradableProposalCid Execute with notional = 50000000.0;token=clientIssuerRoleCid
+  executionCid <- submit jpmIssuer do
+                    exercise executionProposalCid AcceptExecution with iban = "CH12345678910";tradeId="TEST_ID";token=clientIssuerRoleCid
+
+  pure()
