@@ -2,11 +2,11 @@
 
 To build run from command line:
 
-daml build 
+$ daml build 
 
-daml test 
+$ daml test 
 
-daml codegen scala
+$ daml codegen scala
 
-sbt compile
+$ sbt compile
 
